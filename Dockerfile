@@ -12,8 +12,10 @@ COPY package*.json ./
 # install deps
 RUN npm ci
 
+COPY .env ./
 # copy rest of your source
 COPY . .
+
 
 # build the production bundle
 RUN npm run build
