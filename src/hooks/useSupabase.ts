@@ -67,8 +67,8 @@ export const useMatches = (userId: string | undefined) => {
       try {
         console.log('Fetching matches for user:', userId);
         
-        // Use rpc or raw query to access the view
-        const { data: matchedPets, error } = await supabase
+        // Use raw query with customized selection to access the view
+        const { data, error } = await supabase
           .from('matched_pets_view')
           .select('*');
         
@@ -77,7 +77,8 @@ export const useMatches = (userId: string | undefined) => {
           throw error;
         }
         
-        return matchedPets as MatchedPets[] || [];
+        // Type assertion to ensure the right return type
+        return (data || []) as MatchedPets[];
       } catch (error) {
         console.error('Error in useMatches hook:', error);
         throw error;

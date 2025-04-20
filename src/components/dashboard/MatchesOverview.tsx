@@ -1,10 +1,10 @@
 
 import { useEffect } from "react";
-import { Pet } from "@/components/PetCard";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { MatchedPets } from "@/types/match";
 import {
   Card,
   CardContent,
@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/card";
 
 interface MatchesOverviewProps {
-  matches: Pet[];
+  matches: MatchedPets[];
   onMatchesUpdate: () => void;
 }
 
@@ -63,16 +63,14 @@ export const MatchesOverview = ({ matches, onMatchesUpdate }: MatchesOverviewPro
                 You have {matches.length} matches
               </p>
               {matches.slice(0, 2).map((match) => (
-                <div key={match.id} className="flex items-center gap-4 mb-3">
-                  <img
-                    src={match.imageUrl}
-                    alt={match.name}
-                    className="w-10 h-10 object-cover rounded-full"
-                  />
+                <div key={match.match_id} className="flex items-center gap-4 mb-3">
+                  <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                    <span className="text-xs">🐾</span>
+                  </div>
                   <div className="flex-1">
-                    <h3 className="font-medium text-sm">{match.name}</h3>
+                    <h3 className="font-medium text-sm">{match.pet1_name} & {match.pet2_name}</h3>
                     <p className="text-xs text-gray-500">
-                      Owner: {match.ownerName}
+                      Matched on {new Date(match.match_created_at).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
