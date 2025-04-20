@@ -1,3 +1,4 @@
+
 import { useEffect } from "react";
 import { Pet } from "@/components/PetCard";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ export const MatchesOverview = ({ matches, onMatchesUpdate }: MatchesOverviewPro
   useEffect(() => {
     if (!user) return;
 
+    // Set up real-time listener for matches
     const channel = supabase
       .channel('matches-changes')
       .on(
@@ -34,6 +36,7 @@ export const MatchesOverview = ({ matches, onMatchesUpdate }: MatchesOverviewPro
           table: 'matches',
         },
         () => {
+          console.log('Matches updated, refreshing...');
           onMatchesUpdate();
         }
       )
@@ -43,6 +46,8 @@ export const MatchesOverview = ({ matches, onMatchesUpdate }: MatchesOverviewPro
       supabase.removeChannel(channel);
     };
   }, [user, onMatchesUpdate]);
+
+  console.log('Matches in MatchesOverview:', matches);
 
   return (
     <Card>

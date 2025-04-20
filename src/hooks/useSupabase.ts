@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/types/database.types';
@@ -64,22 +65,63 @@ export const useMatches = (userId: string | undefined) => {
       if (!userId) return [];
       try {
         console.log('Fetching matches for user:', userId);
-        const { data, error } = await supabase
+        
+        // First, get the user's pets
+        const { data: userPets, error: petsError } = await supabase
+          .from('pets')
+          .select('id')
+          .eq('owner_id', userId);
+        
+        if (petsError) {
+          console.error('Error fetching user pets:', petsError);
+          throw petsError;
+        }
+        
+        if (!userPets || userPets.length === 0) {
+          console.log('User has no pets');
+          return [];
+        }
+        
+        const petIds = userPets.map(pet => pet.id);
+        console.log('User pet IDs:', petIds);
+        
+        // Get matches where user's pet is pet_id
+        const { data: matches1, error: matches1Error } = await supabase
           .from('matches')
           .select(`
             *,
             pet:pets!pet_id(*),
             matched_pet:pets!matched_pet_id(*)
           `)
-          .or(`pet.owner_id.eq.${userId},matched_pet.owner_id.eq.${userId}`);
+          .in('pet_id', petIds)
+          .eq('status', 'accepted');
         
-        if (error) {
-          console.error('Error fetching matches:', error);
-          throw error;
+        if (matches1Error) {
+          console.error('Error fetching matches (user pet as pet_id):', matches1Error);
+          throw matches1Error;
         }
         
-        console.log('Matches data:', data);
-        return data;
+        // Get matches where user's pet is matched_pet_id
+        const { data: matches2, error: matches2Error } = await supabase
+          .from('matches')
+          .select(`
+            *,
+            pet:pets!pet_id(*),
+            matched_pet:pets!matched_pet_id(*)
+          `)
+          .in('matched_pet_id', petIds)
+          .eq('status', 'accepted');
+        
+        if (matches2Error) {
+          console.error('Error fetching matches (user pet as matched_pet_id):', matches2Error);
+          throw matches2Error;
+        }
+        
+        // Combine both sets of matches
+        const allMatches = [...(matches1 || []), ...(matches2 || [])];
+        console.log('Total matches found:', allMatches.length);
+        
+        return allMatches;
       } catch (error) {
         console.error('Error in useMatches hook:', error);
         throw error;

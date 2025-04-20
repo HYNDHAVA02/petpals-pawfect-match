@@ -29,6 +29,8 @@ export const MatchesList = ({ matches, isLoading }: MatchesListProps) => {
     );
   }
 
+  console.log('Rendering MatchesList with matches:', matches);
+
   return (
     <Card>
       <CardHeader>
@@ -52,6 +54,7 @@ export const MatchesList = ({ matches, isLoading }: MatchesListProps) => {
                       <Button
                         size="sm"
                         className="bg-petpals-purple hover:bg-petpals-purple/90 mt-2 md:mt-0"
+                        onClick={() => navigate(`/matches?pet=${match.id}`)}
                       >
                         Message
                       </Button>

@@ -29,15 +29,19 @@ export const DashboardProvider = ({ children }: { children: React.ReactNode }) =
     const fetchOwnerNames = async () => {
       if (!matchesData || matchesData.length === 0) return;
       
-      // Get unique owner IDs from matches
-      const ownerIds = matchesData.map(match => {
-        const matchedPet = match.pet.owner_id === user?.id ? match.matched_pet : match.pet;
-        return matchedPet.owner_id;
-      }).filter((id, index, self) => self.indexOf(id) === index);
-      
-      if (ownerIds.length === 0) return;
-      
       try {
+        // Get unique owner IDs from matches
+        const ownerIds = matchesData.map(match => {
+          // Determine which pet belongs to another owner
+          const isUserPetAsPetId = match.pet.owner_id === user?.id;
+          const otherPet = isUserPetAsPetId ? match.matched_pet : match.pet;
+          return otherPet.owner_id;
+        }).filter((id, index, self) => self.indexOf(id) === index);
+        
+        if (ownerIds.length === 0) return;
+        
+        console.log('Fetching owner names for IDs:', ownerIds);
+        
         const { data, error } = await supabase
           .from('profiles')
           .select('id, full_name')
@@ -52,6 +56,7 @@ export const DashboardProvider = ({ children }: { children: React.ReactNode }) =
         });
         
         setOwnerNames(nameMap);
+        console.log('Owner names fetched:', nameMap);
       } catch (error) {
         console.error('Error fetching owner names:', error);
         toast({
@@ -87,8 +92,11 @@ export const DashboardProvider = ({ children }: { children: React.ReactNode }) =
   })) || [];
 
   // Transform matches data to Pet interface
-  const matches: Pet[] = matchesData?.map((match) => {
-    const matchedPet = match.pet.owner_id === user?.id ? match.matched_pet : match.pet;
+  const matches: Pet[] = (matchesData || []).map((match) => {
+    // Determine which pet belongs to another owner
+    const isUserPetAsPetId = match.pet.owner_id === user?.id;
+    const matchedPet = isUserPetAsPetId ? match.matched_pet : match.pet;
+    
     return {
       id: matchedPet.id,
       name: matchedPet.name,
@@ -100,7 +108,9 @@ export const DashboardProvider = ({ children }: { children: React.ReactNode }) =
       ownerId: matchedPet.owner_id,
       ownerName: ownerNames[matchedPet.owner_id] || "Pet Owner",
     };
-  }) || [];
+  });
+
+  console.log('Processed matches in context:', matches.length);
 
   const value = {
     userPets,
