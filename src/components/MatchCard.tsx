@@ -36,11 +36,13 @@ const MatchCard: React.FC<MatchCardProps> = ({ pet, onChatClick }) => {
               {pet.distance && (
                 <p className="text-xs text-gray-500">{pet.distance}</p>
               )}
+              <div className="mt-2">
+                <p className="text-xs text-gray-500">Owner: {pet.ownerName}</p>
+              </div>
             </div>
           </div>
           <p className="text-sm text-gray-600 line-clamp-2 mb-3">{pet.bio}</p>
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-gray-500">Owner: {pet.ownerName}</span>
+          <div className="flex justify-end items-center">
             <Button 
               size="sm" 
               className="bg-petpals-purple hover:bg-petpals-purple/90"
@@ -56,3 +58,4 @@ const MatchCard: React.FC<MatchCardProps> = ({ pet, onChatClick }) => {
 };
 
 export default MatchCard;
+

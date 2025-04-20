@@ -29,8 +29,6 @@ export const MatchesList = ({ matches, isLoading }: MatchesListProps) => {
     );
   }
 
-  console.log('Rendering MatchesList with matches:', matches);
-
   return (
     <Card>
       <CardHeader>
@@ -50,7 +48,10 @@ export const MatchesList = ({ matches, isLoading }: MatchesListProps) => {
                   />
                   <div className="flex-1">
                     <div className="flex flex-col md:flex-row md:items-center justify-between mb-2">
-                      <h3 className="font-bold text-lg">{match.name}</h3>
+                      <div>
+                        <h3 className="font-bold text-lg">{match.name}</h3>
+                        <p className="text-sm text-gray-500">Matched with your pet</p>
+                      </div>
                       <Button
                         size="sm"
                         className="bg-petpals-purple hover:bg-petpals-purple/90 mt-2 md:mt-0"
@@ -90,3 +91,4 @@ export const MatchesList = ({ matches, isLoading }: MatchesListProps) => {
     </Card>
   );
 };
+
