@@ -131,14 +131,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
+      // First, check if we have a session before trying to sign out
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData.session) {
+        // If no session exists, just clear local state without calling signOut
+        setUser(null);
+        setSession(null);
+        navigate('/');
+        return;
+      }
+
+      // If we have a session, try to sign out properly
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      
+      if (error) {
+        // If error is session not found, we still want to clear local state
+        if (error.message.includes("session") && error.message.includes("not found")) {
+          setUser(null);
+          setSession(null);
+          navigate('/');
+          return;
+        }
+        throw error;
+      }
     } catch (error: any) {
-      toast({
-        title: "Logout failed",
-        description: error.message,
-        variant: "destructive",
-      });
+      // Only show toast for errors that aren't related to missing session
+      if (!error.message.includes("session") || !error.message.includes("not found")) {
+        toast({
+          title: "Logout failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        // For session not found errors, just clear state and navigate
+        setUser(null);
+        setSession(null);
+        navigate('/');
+      }
     }
   };
 
