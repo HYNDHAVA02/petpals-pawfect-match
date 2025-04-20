@@ -1,11 +1,11 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import MatchCard from "@/components/MatchCard";
 import { Pet } from "@/components/PetCard";
-import { mockMatches } from "@/data/mockData";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -15,15 +15,106 @@ const Matches = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [matches, setMatches] = useState<Pet[]>(mockMatches);
+  const [matches, setMatches] = useState<Pet[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<Pet | null>(null);
   const [chatMessage, setChatMessage] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  if (!user) {
-    navigate("/login");
-    return null;
-  }
+  useEffect(() => {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
+    const fetchMatches = async () => {
+      try {
+        setLoading(true);
+
+        // First, get the user's pets
+        const { data: userPets, error: userPetsError } = await supabase
+          .from('pets')
+          .select('id')
+          .eq('owner_id', user.id);
+
+        if (userPetsError) throw userPetsError;
+        if (!userPets || userPets.length === 0) {
+          setLoading(false);
+          return;
+        }
+
+        const userPetIds = userPets.map(pet => pet.id);
+
+        // Get matches for any of the user's pets
+        const { data: matchesData, error: matchesError } = await supabase
+          .from('matches')
+          .select('*')
+          .in('pet_id', userPetIds)
+          .eq('status', 'accepted');
+
+        if (matchesError) throw matchesError;
+
+        // Also get matches where the user's pet is the matched_pet_id
+        const { data: matchesData2, error: matchesError2 } = await supabase
+          .from('matches')
+          .select('*')
+          .in('matched_pet_id', userPetIds)
+          .eq('status', 'accepted');
+
+        if (matchesError2) throw matchesError2;
+
+        // Combine both match sets
+        const allMatches = [...(matchesData || []), ...(matchesData2 || [])];
+        
+        if (allMatches.length === 0) {
+          setLoading(false);
+          return;
+        }
+
+        // Get the pets that matched with the user's pets
+        const matchedPetIds = allMatches.map(match => 
+          match.pet_id !== userPetIds.includes(match.pet_id) ? match.pet_id : match.matched_pet_id
+        ).filter(id => !userPetIds.includes(id));
+
+        // Fetch the matched pets' details
+        const { data: matchedPets, error: matchedPetsError } = await supabase
+          .from('pets')
+          .select(`
+            *,
+            profiles:owner_id(full_name)
+          `)
+          .in('id', matchedPetIds);
+
+        if (matchedPetsError) throw matchedPetsError;
+
+        // Format pets for the MatchCard component
+        const formattedMatches: Pet[] = (matchedPets || []).map(pet => ({
+          id: pet.id,
+          name: pet.name,
+          age: pet.age,
+          breed: pet.breed,
+          gender: pet.gender as "male" | "female",
+          bio: pet.bio || "",
+          imageUrl: pet.image_url || "/placeholder.svg",
+          ownerId: pet.owner_id,
+          ownerName: pet.profiles?.full_name || "Pet Owner"
+        }));
+
+        setMatches(formattedMatches);
+      } catch (error) {
+        console.error("Error fetching matches:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load matches. Please try again later.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMatches();
+  }, [user, navigate, toast]);
 
   const handleChatClick = (pet: Pet) => {
     setSelectedMatch(pet);
@@ -42,6 +133,10 @@ const Matches = () => {
     // In a real app, we would send this to the backend via WebSocket or AppSync GraphQL
   };
 
+  if (!user) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -50,7 +145,11 @@ const Matches = () => {
         <div className="max-w-4xl mx-auto">
           <h1 className="text-2xl font-bold mb-6">Your Matches</h1>
           
-          {matches.length > 0 ? (
+          {loading ? (
+            <div className="flex justify-center items-center h-60">
+              <div className="animate-pulse text-petpals-purple">Loading matches...</div>
+            </div>
+          ) : matches.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {matches.map((match) => (
                 <MatchCard 

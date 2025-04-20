@@ -14,6 +14,7 @@ const Discover = () => {
   const [currentPets, setCurrentPets] = useState<Pet[]>([]);
   const [loading, setLoading] = useState(true);
   const [noMorePets, setNoMorePets] = useState(false);
+  const [userPetsIds, setUserPetsIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (!user) {
@@ -33,6 +34,7 @@ const Discover = () => {
           .eq('owner_id', user.id);
         
         const userPetIds = userPets?.map(pet => pet.id) || [];
+        setUserPetsIds(userPetIds);
         
         // Get pets from other users
         const { data: pets, error } = await supabase
@@ -81,19 +83,78 @@ const Discover = () => {
     fetchPets();
   }, [user, navigate, toast]);
 
-  const handleSwipeRight = (pet: Pet) => {
+  const handleSwipeRight = async (pet: Pet) => {
     console.log("Liked:", pet.name);
     
-    // In a real app, we would send this to the backend
-    setTimeout(() => {
-      // Show a random match about 30% of the time for demo purposes
-      if (Math.random() > 0.7) {
+    if (userPetsIds.length === 0) {
+      toast({
+        title: "No pets found",
+        description: "You need to add a pet first before matching.",
+        variant: "destructive",
+      });
+      navigate("/pet-profile");
+      return;
+    }
+
+    try {
+      // For now, use the first pet of the user for matching
+      const userPetId = userPetsIds[0];
+
+      // Check if there's already a match from the other user
+      const { data: existingMatch } = await supabase
+        .from('matches')
+        .select('*')
+        .eq('pet_id', pet.id)
+        .eq('matched_pet_id', userPetId)
+        .eq('status', 'pending');
+
+      if (existingMatch && existingMatch.length > 0) {
+        // Update the match to accepted
+        await supabase
+          .from('matches')
+          .update({ status: 'accepted' })
+          .eq('id', existingMatch[0].id);
+
         toast({
           title: "It's a match!",
           description: `You and ${pet.name} liked each other!`,
         });
+      } else {
+        // Create a new pending match
+        await supabase
+          .from('matches')
+          .insert({
+            pet_id: userPetId,
+            matched_pet_id: pet.id,
+            status: 'pending'
+          });
+
+        // Show a match notification randomly (for demonstration purposes)
+        if (Math.random() > 0.7) {
+          toast({
+            title: "It's a match!",
+            description: `You and ${pet.name} liked each other!`,
+          });
+          
+          // If it's a match, update the status to accepted
+          await supabase
+            .from('matches')
+            .update({ status: 'accepted' })
+            .eq('pet_id', userPetId)
+            .eq('matched_pet_id', pet.id);
+        }
       }
-      
+    } catch (error) {
+      console.error("Error creating match:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create match. Please try again later.",
+        variant: "destructive",
+      });
+    }
+    
+    // Remove the current pet from the view
+    setTimeout(() => {
       removeCurrentPet();
     }, 500);
   };
