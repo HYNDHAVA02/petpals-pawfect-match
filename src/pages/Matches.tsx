@@ -11,9 +11,9 @@ import ErrorDialog from "@/components/common/ErrorDialog";
 import { useMatchDetails } from "@/hooks/useMatchDetails";
 import { EmptyMatches } from "@/components/matches/EmptyMatches";
 import { MatchesGrid } from "@/components/matches/MatchesGrid";
-import { useDashboard } from "@/contexts/DashboardContext";
+import { DashboardProvider, useDashboard } from "@/contexts/DashboardContext";
 
-const Matches = () => {
+const MatchesContent = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { matches, isLoadingMatches, handleMatchesUpdate } = useDashboard();
@@ -102,6 +102,14 @@ const Matches = () => {
         message={errorMessage}
       />
     </div>
+  );
+};
+
+const Matches = () => {
+  return (
+    <DashboardProvider>
+      <MatchesContent />
+    </DashboardProvider>
   );
 };
 
