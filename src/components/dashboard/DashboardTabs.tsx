@@ -1,15 +1,10 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useDashboard } from "@/contexts/DashboardContext";
-import { PetOverview } from "./PetOverview";
-import { MatchesOverview } from "./MatchesOverview";
-import { ActivityOverview } from "./ActivityOverview";
-import { PetsList } from "./PetsList";
-import { MatchesList } from "./MatchesList";
+import { OverviewTab } from "./tabs/OverviewTab";
+import { PetsTab } from "./tabs/PetsTab";
+import { MatchesTab } from "./tabs/MatchesTab";
 
 export const DashboardTabs = () => {
-  const { userPets, matches, isLoadingPets, handlePetsUpdate, handleMatchesUpdate } = useDashboard();
-
   return (
     <Tabs defaultValue="overview" className="w-full">
       <TabsList className="grid w-full grid-cols-3 mb-6">
@@ -19,26 +14,15 @@ export const DashboardTabs = () => {
       </TabsList>
       
       <TabsContent value="overview">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <PetOverview 
-            userPets={userPets} 
-            isLoadingPets={isLoadingPets}
-            onPetsUpdate={handlePetsUpdate}
-          />
-          <MatchesOverview 
-            matches={matches}
-            onMatchesUpdate={handleMatchesUpdate}
-          />
-        </div>
-        <ActivityOverview />
+        <OverviewTab />
       </TabsContent>
       
       <TabsContent value="pets">
-        <PetsList userPets={userPets} isLoadingPets={isLoadingPets} />
+        <PetsTab />
       </TabsContent>
       
       <TabsContent value="matches">
-        <MatchesList matches={matches} />
+        <MatchesTab />
       </TabsContent>
     </Tabs>
   );
