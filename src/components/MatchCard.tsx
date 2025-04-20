@@ -30,6 +30,12 @@ const MatchCard: React.FC<MatchCardProps> = ({ pet, onChatClick }) => {
             <div>
               <h3 className="font-semibold text-lg">{pet.name}</h3>
               <p className="text-sm text-gray-600">{pet.breed}, {pet.age} years</p>
+              {pet.location && (
+                <p className="text-xs text-gray-500">{pet.location}</p>
+              )}
+              {pet.distance && (
+                <p className="text-xs text-gray-500">{pet.distance}</p>
+              )}
             </div>
           </div>
           <p className="text-sm text-gray-600 line-clamp-2 mb-3">{pet.bio}</p>

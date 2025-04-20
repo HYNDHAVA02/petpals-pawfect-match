@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,8 @@ export interface Pet {
   imageUrl: string;
   ownerId: string;
   ownerName: string;
+  location?: string;
+  distance?: string;
 }
 
 interface PetCardProps {

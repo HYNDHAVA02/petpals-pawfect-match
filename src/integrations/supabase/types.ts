@@ -99,6 +99,9 @@ export type Database = {
           gender: string
           id: string
           image_url: string | null
+          latitude: number | null
+          location: string | null
+          longitude: number | null
           name: string
           owner_id: string
           owner_name: string | null
@@ -112,6 +115,9 @@ export type Database = {
           gender: string
           id?: string
           image_url?: string | null
+          latitude?: number | null
+          location?: string | null
+          longitude?: number | null
           name: string
           owner_id: string
           owner_name?: string | null
@@ -125,6 +131,9 @@ export type Database = {
           gender?: string
           id?: string
           image_url?: string | null
+          latitude?: number | null
+          location?: string | null
+          longitude?: number | null
           name?: string
           owner_id?: string
           owner_name?: string | null
@@ -172,7 +181,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      calculate_distance: {
+        Args: { lat1: number; lon1: number; lat2: number; lon2: number }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never

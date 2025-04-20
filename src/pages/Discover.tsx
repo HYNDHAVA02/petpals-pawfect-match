@@ -2,14 +2,17 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLocation } from "@/hooks/useLocation";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import PetCard, { Pet } from "@/components/PetCard";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Discover = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { location, error: locationError } = useLocation();
   const [currentPets, setCurrentPets] = useState<Pet[]>([]);
   const [loading, setLoading] = useState(true);
   const [noMorePets, setNoMorePets] = useState(false);
@@ -21,7 +24,6 @@ const Discover = () => {
       return;
     }
     
-    // Fetch pets from Supabase
     const fetchPets = async () => {
       try {
         setLoading(true);
@@ -50,9 +52,8 @@ const Discover = () => {
             matchedPetIds.add(match.pet_id);
           }
         });
-        
-        // Get pets from other users, excluding matched pets
-        const { data: pets, error } = await supabase
+
+        let query = supabase
           .from('pets')
           .select(`
             *,
@@ -60,7 +61,19 @@ const Discover = () => {
           `)
           .neq('owner_id', user.id)
           .not('id', 'in', `(${Array.from(matchedPetIds).join(',')})`);
+
+        // If user location is available, order by distance
+        if (location) {
+          query = query.rpc('calculate_distance', {
+            lat1: location.latitude,
+            lon1: location.longitude,
+            lat2: 'latitude',
+            lon2: 'longitude'
+          });
+        }
           
+        const { data: pets, error } = await query;
+        
         if (error) throw error;
         
         if (!pets || pets.length === 0) {
@@ -79,7 +92,11 @@ const Discover = () => {
           bio: pet.bio || "",
           imageUrl: pet.image_url || "/placeholder.svg",
           ownerId: pet.owner_id,
-          ownerName: pet.profiles?.full_name || "Pet Owner"
+          ownerName: pet.owner_name || "Pet Owner",
+          location: pet.location || "Unknown location",
+          distance: location && pet.distance ? 
+            `${(pet.distance / 1000).toFixed(1)} km away` : 
+            undefined
         }));
         
         setCurrentPets(formattedPets);
@@ -97,7 +114,7 @@ const Discover = () => {
     };
     
     fetchPets();
-  }, [user, navigate, toast]);
+  }, [user, navigate, toast, location]);
 
   const handleSwipeRight = async (pet: Pet) => {
     console.log("Liked:", pet.name);
@@ -200,6 +217,14 @@ const Discover = () => {
       <main className="container mx-auto py-8 px-4">
         <div className="max-w-md mx-auto">
           <h1 className="text-2xl font-bold mb-6 text-center">Discover Pets</h1>
+          
+          {locationError && (
+            <Alert className="mb-4">
+              <AlertDescription>
+                {locationError}. Showing all pets instead of nearby ones.
+              </AlertDescription>
+            </Alert>
+          )}
           
           {loading ? (
             <div className="flex justify-center items-center h-80">
