@@ -13,6 +13,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   isLoading: boolean;
+  needsEmailVerification: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,6 +30,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [needsEmailVerification, setNeedsEmailVerification] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -39,6 +41,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(session);
         setUser(session?.user ?? null);
         setIsLoading(false);
+
+        // Reset email verification flag when user logs in
+        if (event === 'SIGNED_IN') {
+          setNeedsEmailVerification(false);
+        }
 
         // Safe navigation that doesn't run on initial load
         if (event === 'SIGNED_IN' && window.location.pathname === '/login') {
@@ -68,7 +75,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        // Handle "Email not confirmed" error specifically
+        if (error.message === "Email not confirmed") {
+          setNeedsEmailVerification(true);
+          toast({
+            title: "Email verification required",
+            description: "Please check your email and verify your account before logging in.",
+            variant: "default",
+          });
+        } else {
+          throw error;
+        }
+      }
 
     } catch (error: any) {
       toast({
@@ -94,6 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) throw error;
 
+      setNeedsEmailVerification(true);
       toast({
         title: "Sign up successful",
         description: "Please check your email to verify your account",
@@ -130,7 +150,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       signup, 
       logout, 
       isAuthenticated: !!user,
-      isLoading 
+      isLoading,
+      needsEmailVerification
     }}>
       {children}
     </AuthContext.Provider>

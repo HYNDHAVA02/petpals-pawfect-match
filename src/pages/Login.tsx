@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/form";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { InfoIcon } from "lucide-react";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -24,7 +26,7 @@ const formSchema = z.object({
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, needsEmailVerification } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -40,18 +42,16 @@ const Login = () => {
     try {
       setIsLoading(true);
       await login(data.email, data.password);
+      
+      // This will only execute if login is successful (no error thrown)
       toast({
         title: "Login successful",
         description: "Welcome back to PetPals!",
       });
       navigate("/discover");
     } catch (error) {
-      toast({
-        title: "Login failed",
-        description: "Please check your credentials and try again",
-        variant: "destructive",
-      });
       console.error("Login error:", error);
+      // Toast is already shown in the login function
     } finally {
       setIsLoading(false);
     }
@@ -73,6 +73,16 @@ const Login = () => {
             Sign in to your account to continue
           </p>
         </div>
+
+        {needsEmailVerification && (
+          <Alert className="bg-amber-50 border-amber-200">
+            <InfoIcon className="h-4 w-4 text-amber-600" />
+            <AlertTitle className="text-amber-800">Email verification required</AlertTitle>
+            <AlertDescription className="text-amber-700">
+              Please check your email inbox and click the verification link before signing in.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="mt-8 bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <Form {...form}>
