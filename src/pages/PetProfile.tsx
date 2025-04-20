@@ -5,13 +5,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import PetProfileForm from "@/components/PetProfileForm";
-import { mockUserPets } from "@/data/mockData";
+import { useCreatePet } from "@/hooks/useSupabase";
 
 const PetProfile = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { mutateAsync: createPet } = useCreatePet();
 
   if (!user) {
     navigate("/login");
@@ -21,10 +22,20 @@ const PetProfile = () => {
   const handleSubmit = async (formData: any) => {
     setIsSubmitting(true);
     
-    // Simulate API call to create or update pet profile
     try {
-      // This would be an API call in a real app
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Format data for Supabase
+      const petData = {
+        name: formData.name,
+        age: parseFloat(formData.age),
+        breed: formData.breed,
+        gender: formData.gender,
+        bio: formData.bio,
+        image_url: formData.imageUrl,
+        owner_id: user.id
+      };
+      
+      // Create pet in Supabase
+      await createPet(petData);
       
       toast({
         title: "Success!",
@@ -32,12 +43,12 @@ const PetProfile = () => {
       });
       navigate("/dashboard");
     } catch (error) {
+      console.error("Error saving pet profile:", error);
       toast({
         title: "Error",
         description: "Failed to save pet profile",
         variant: "destructive",
       });
-      console.error("Error saving pet profile:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -51,10 +62,10 @@ const PetProfile = () => {
         <div className="max-w-2xl mx-auto">
           <div className="bg-white rounded-lg shadow-sm p-6">
             <h1 className="text-2xl font-bold mb-6">
-              {mockUserPets.length > 0 ? "Add Another Pet" : "Create Your Pet's Profile"}
+              Create Your Pet's Profile
             </h1>
             
-            <PetProfileForm onSubmit={handleSubmit} />
+            <PetProfileForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
           </div>
         </div>
       </main>

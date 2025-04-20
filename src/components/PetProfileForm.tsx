@@ -40,9 +40,14 @@ type PetFormValues = z.infer<typeof petFormSchema>;
 interface PetProfileFormProps {
   onSubmit: (data: PetFormValues & { imageUrl: string }) => void;
   initialData?: PetFormValues & { imageUrl: string };
+  isSubmitting?: boolean;
 }
 
-const PetProfileForm: React.FC<PetProfileFormProps> = ({ onSubmit, initialData }) => {
+const PetProfileForm: React.FC<PetProfileFormProps> = ({ 
+  onSubmit, 
+  initialData,
+  isSubmitting = false 
+}) => {
   const { toast } = useToast();
   const [imagePreview, setImagePreview] = useState<string>(initialData?.imageUrl || "");
   const [isUploading, setIsUploading] = useState(false);
@@ -228,9 +233,11 @@ const PetProfileForm: React.FC<PetProfileFormProps> = ({ onSubmit, initialData }
         <Button 
           type="submit" 
           className="w-full bg-petpals-purple hover:bg-petpals-purple/90"
-          disabled={isUploading}
+          disabled={isSubmitting || isUploading}
         >
-          {isUploading ? "Uploading..." : initialData ? "Update Pet Profile" : "Create Pet Profile"}
+          {isUploading ? "Uploading..." : 
+           isSubmitting ? "Saving..." : 
+           initialData ? "Update Pet Profile" : "Create Pet Profile"}
         </Button>
       </form>
     </Form>
