@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -27,7 +26,7 @@ const Discover = () => {
       try {
         setLoading(true);
         
-        // Get the current user's pets to exclude them
+        // Get the current user's pets
         const { data: userPets } = await supabase
           .from('pets')
           .select('id')
@@ -35,15 +34,32 @@ const Discover = () => {
         
         const userPetIds = userPets?.map(pet => pet.id) || [];
         setUserPetsIds(userPetIds);
+
+        // Get all matches involving user's pets to exclude them
+        const { data: matches } = await supabase
+          .from('matches')
+          .select('pet_id, matched_pet_id')
+          .or(`pet_id.in.(${userPetIds.join(',')}),matched_pet_id.in.(${userPetIds.join(',')})`);
+
+        // Create a set of all matched pet IDs
+        const matchedPetIds = new Set<string>();
+        matches?.forEach(match => {
+          if (userPetIds.includes(match.pet_id)) {
+            matchedPetIds.add(match.matched_pet_id);
+          } else {
+            matchedPetIds.add(match.pet_id);
+          }
+        });
         
-        // Get pets from other users
+        // Get pets from other users, excluding matched pets
         const { data: pets, error } = await supabase
           .from('pets')
           .select(`
             *,
             profiles:owner_id(full_name)
           `)
-          .neq('owner_id', user.id);
+          .neq('owner_id', user.id)
+          .not('id', 'in', `(${Array.from(matchedPetIds).join(',')})`);
           
         if (error) throw error;
         

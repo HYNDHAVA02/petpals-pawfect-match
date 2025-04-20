@@ -1,7 +1,9 @@
-
+import { useEffect } from "react";
 import { Pet } from "@/components/PetCard";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Card,
   CardContent,
@@ -12,10 +14,35 @@ import {
 
 interface MatchesOverviewProps {
   matches: Pet[];
+  onMatchesUpdate: () => void;
 }
 
-export const MatchesOverview = ({ matches }: MatchesOverviewProps) => {
+export const MatchesOverview = ({ matches, onMatchesUpdate }: MatchesOverviewProps) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('matches-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'matches',
+        },
+        () => {
+          onMatchesUpdate();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, onMatchesUpdate]);
 
   return (
     <Card>

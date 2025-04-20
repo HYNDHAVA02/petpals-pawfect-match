@@ -1,11 +1,12 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import { Pet } from "@/components/PetCard";
 import { useNavigate } from "react-router-dom";
 import { usePets } from "@/hooks/useSupabase";
+import { supabase } from "@/integrations/supabase/client";
 import { mockMatches } from "@/data/mockData";
 import { PetOverview } from "@/components/dashboard/PetOverview";
 import { MatchesOverview } from "@/components/dashboard/MatchesOverview";
@@ -19,20 +20,16 @@ const Dashboard = () => {
   const [matches] = useState<Pet[]>(mockMatches);
 
   // Fetch real pets from Supabase
-  const { data: userPetsData, isLoading: isLoadingPets } = usePets(user?.id);
+  const { data: userPetsData, isLoading: isLoadingPets, refetch: refetchPets } = usePets(user?.id);
 
-  // Transform the pet data to match the Pet interface
-  const userPets: Pet[] = userPetsData?.map((pet) => ({
-    id: pet.id,
-    name: pet.name,
-    age: pet.age,
-    breed: pet.breed,
-    gender: pet.gender as "male" | "female", // Type assertion to fix the error
-    bio: pet.bio || "",
-    imageUrl: pet.image_url || "/placeholder.svg",
-    ownerId: pet.owner_id,
-    ownerName: user?.user_metadata?.full_name || "Pet Owner",
-  })) || [];
+  const handlePetsUpdate = useCallback(() => {
+    refetchPets();
+  }, [refetchPets]);
+
+  const handleMatchesUpdate = useCallback(() => {
+    // Add logic to refetch matches when implemented
+    console.log("Matches updated");
+  }, []);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -44,6 +41,19 @@ const Dashboard = () => {
   if (!user) {
     return null;
   }
+
+  // Transform the pet data to match the Pet interface
+  const userPets: Pet[] = userPetsData?.map((pet) => ({
+    id: pet.id,
+    name: pet.name,
+    age: pet.age,
+    breed: pet.breed,
+    gender: pet.gender as "male" | "female",
+    bio: pet.bio || "",
+    imageUrl: pet.image_url || "/placeholder.svg",
+    ownerId: pet.owner_id,
+    ownerName: user?.user_metadata?.full_name || "Pet Owner",
+  })) || [];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -62,8 +72,15 @@ const Dashboard = () => {
             
             <TabsContent value="overview">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <PetOverview userPets={userPets} isLoadingPets={isLoadingPets} />
-                <MatchesOverview matches={matches} />
+                <PetOverview 
+                  userPets={userPets} 
+                  isLoadingPets={isLoadingPets}
+                  onPetsUpdate={handlePetsUpdate}
+                />
+                <MatchesOverview 
+                  matches={matches}
+                  onMatchesUpdate={handleMatchesUpdate}
+                />
               </div>
               <ActivityOverview />
             </TabsContent>

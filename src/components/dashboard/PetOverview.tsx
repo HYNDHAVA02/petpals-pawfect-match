@@ -1,7 +1,9 @@
-
+import { useEffect } from "react";
 import { Pet } from "@/components/PetCard";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Card,
   CardContent,
@@ -13,10 +15,36 @@ import {
 interface PetOverviewProps {
   userPets: Pet[];
   isLoadingPets: boolean;
+  onPetsUpdate: () => void;
 }
 
-export const PetOverview = ({ userPets, isLoadingPets }: PetOverviewProps) => {
+export const PetOverview = ({ userPets, isLoadingPets, onPetsUpdate }: PetOverviewProps) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('pets-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'pets',
+          filter: `owner_id=eq.${user.id}`,
+        },
+        () => {
+          onPetsUpdate();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, onPetsUpdate]);
 
   return (
     <Card>
