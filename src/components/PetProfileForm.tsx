@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -6,22 +5,11 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useLocation } from "@/hooks/useLocation";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { MapPin } from "lucide-react";
 
 const petFormSchema = z.object({
   name: z.string().min(1, { message: "Name is required" }),
@@ -33,13 +21,14 @@ const petFormSchema = z.object({
     message: "Please select a gender",
   }),
   bio: z.string().min(10, { message: "Bio must be at least 10 characters" }),
+  location: z.string().min(1, { message: "Location is required" }),
 });
 
 type PetFormValues = z.infer<typeof petFormSchema>;
 
 interface PetProfileFormProps {
-  onSubmit: (data: PetFormValues & { imageUrl: string }) => void;
-  initialData?: PetFormValues & { imageUrl: string };
+  onSubmit: (data: PetFormValues & { imageUrl: string; latitude?: number; longitude?: number }) => void;
+  initialData?: PetFormValues & { imageUrl: string; latitude?: number; longitude?: number };
   isSubmitting?: boolean;
 }
 
@@ -49,8 +38,10 @@ const PetProfileForm: React.FC<PetProfileFormProps> = ({
   isSubmitting = false 
 }) => {
   const { toast } = useToast();
+  const { location: userLocation, error: locationError } = useLocation();
   const [imagePreview, setImagePreview] = useState<string>(initialData?.imageUrl || "");
   const [isUploading, setIsUploading] = useState(false);
+  const [useCurrentLocation, setUseCurrentLocation] = useState(false);
 
   const form = useForm<PetFormValues>({
     resolver: zodResolver(petFormSchema),
@@ -60,6 +51,7 @@ const PetProfileForm: React.FC<PetProfileFormProps> = ({
       breed: "",
       gender: "male",
       bio: "",
+      location: "",
     },
   });
 
@@ -87,16 +79,12 @@ const PetProfileForm: React.FC<PetProfileFormProps> = ({
 
     setIsUploading(true);
     
-    // Create a preview URL
     const reader = new FileReader();
     reader.onloadend = () => {
       setImagePreview(reader.result as string);
       setIsUploading(false);
     };
     reader.readAsDataURL(file);
-    
-    // In a real app, you would upload to AWS S3 here
-    // For now, we'll just use the preview
   };
 
   const handleSubmit = (data: PetFormValues) => {
@@ -109,11 +97,27 @@ const PetProfileForm: React.FC<PetProfileFormProps> = ({
       return;
     }
 
-    // Submit the form data with the image URL
     onSubmit({
       ...data,
       imageUrl: imagePreview,
+      ...(useCurrentLocation && userLocation ? {
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+      } : {})
     });
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (userLocation) {
+      setUseCurrentLocation(true);
+      form.setValue("location", "Using current location");
+    } else {
+      toast({
+        title: "Location unavailable",
+        description: "Please enable location services or enter location manually",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -206,6 +210,37 @@ const PetProfileForm: React.FC<PetProfileFormProps> = ({
                     <SelectItem value="female">Female</SelectItem>
                   </SelectContent>
                 </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <FormField
+            control={form.control}
+            name="location"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Location</FormLabel>
+                <div className="flex gap-2">
+                  <FormControl>
+                    <Input 
+                      placeholder="Enter location" 
+                      {...field}
+                      disabled={useCurrentLocation}
+                    />
+                  </FormControl>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleUseCurrentLocation}
+                    className="flex items-center gap-2"
+                  >
+                    <MapPin className="h-4 w-4" />
+                    Use Current
+                  </Button>
+                </div>
                 <FormMessage />
               </FormItem>
             )}

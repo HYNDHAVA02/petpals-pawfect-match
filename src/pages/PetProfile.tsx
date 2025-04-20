@@ -31,7 +31,10 @@ const PetProfile = () => {
         gender: formData.gender,
         bio: formData.bio,
         image_url: formData.imageUrl,
-        owner_id: user.id
+        owner_id: user.id,
+        location: formData.location,
+        latitude: formData.latitude,
+        longitude: formData.longitude
       };
       
       // Create pet in Supabase
