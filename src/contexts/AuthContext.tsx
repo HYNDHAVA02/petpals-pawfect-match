@@ -40,7 +40,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null);
         setIsLoading(false);
 
-        if (event === 'SIGNED_IN') {
+        // Safe navigation that doesn't run on initial load
+        if (event === 'SIGNED_IN' && window.location.pathname === '/login') {
           navigate('/discover');
         } else if (event === 'SIGNED_OUT') {
           navigate('/');
