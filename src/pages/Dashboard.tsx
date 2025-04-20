@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Card, 
   CardContent, 
@@ -11,19 +11,40 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
-import { mockUserPets, mockMatches } from "@/data/mockData";
 import { Pet } from "@/components/PetCard";
 import { useNavigate } from "react-router-dom";
+import { usePets, useMatches } from "@/hooks/useSupabase";
+import { mockMatches } from "@/data/mockData";
 
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
-  const [userPets, setUserPets] = useState<Pet[]>(mockUserPets);
   const [matches, setMatches] = useState<Pet[]>(mockMatches);
 
+  // Fetch real pets from Supabase
+  const { data: userPetsData, isLoading: isLoadingPets } = usePets(user?.id);
+  
+  // Transform the pet data to match the Pet interface
+  const userPets: Pet[] = userPetsData?.map(pet => ({
+    id: pet.id,
+    name: pet.name,
+    age: pet.age,
+    breed: pet.breed,
+    gender: pet.gender,
+    bio: pet.bio || "",
+    imageUrl: pet.image_url || "/placeholder.svg",
+    ownerId: pet.owner_id,
+    ownerName: user?.user_metadata?.full_name || "Pet Owner"
+  })) || [];
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!user) {
+      navigate("/login");
+    }
+  }, [user, navigate]);
+
   if (!user) {
-    navigate("/login");
     return null;
   }
 
@@ -53,7 +74,9 @@ const Dashboard = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {userPets.length > 0 ? (
+                      {isLoadingPets ? (
+                        <p className="text-gray-500">Loading your pets...</p>
+                      ) : userPets.length > 0 ? (
                         userPets.map(pet => (
                           <div key={pet.id} className="flex items-center gap-4">
                             <img 
@@ -161,7 +184,9 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
-                    {userPets.length > 0 ? (
+                    {isLoadingPets ? (
+                      <p className="text-gray-500">Loading your pets...</p>
+                    ) : userPets.length > 0 ? (
                       userPets.map(pet => (
                         <div key={pet.id} className="bg-white p-4 rounded-lg shadow-sm">
                           <div className="flex flex-col md:flex-row gap-4 items-start">
