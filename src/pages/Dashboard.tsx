@@ -30,7 +30,7 @@ const Dashboard = () => {
     name: pet.name,
     age: pet.age,
     breed: pet.breed,
-    gender: pet.gender,
+    gender: pet.gender as "male" | "female", // Type assertion to fix the error
     bio: pet.bio || "",
     imageUrl: pet.image_url || "/placeholder.svg",
     ownerId: pet.owner_id,
