@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,14 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription } from "@/components/ui/alert-dialog";
+
+interface Message {
+  id: string;
+  content: string;
+  sender_id: string;
+  created_at: string;
+}
 
 const Matches = () => {
   const navigate = useNavigate();
@@ -20,6 +28,11 @@ const Matches = () => {
   const [chatMessage, setChatMessage] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [matchId, setMatchId] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     if (!user) {
@@ -116,21 +129,147 @@ const Matches = () => {
     fetchMatches();
   }, [user, navigate, toast]);
 
-  const handleChatClick = (pet: Pet) => {
-    setSelectedMatch(pet);
-    setChatOpen(true);
+  useEffect(() => {
+    // Scroll to bottom of message list when messages change
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  useEffect(() => {
+    // Setup realtime subscription for new messages when a chat is open
+    if (!chatOpen || !matchId || !user) return;
+
+    const fetchMessages = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('match_id', matchId)
+          .order('created_at', { ascending: true });
+
+        if (error) throw error;
+        setMessages(data || []);
+      } catch (error) {
+        console.error("Error fetching messages:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load messages",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchMessages();
+
+    // Subscribe to new messages
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `match_id=eq.${matchId}`,
+        },
+        (payload) => {
+          const newMessage = payload.new as Message;
+          setMessages(prev => [...prev, newMessage]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [chatOpen, matchId, user, toast]);
+
+  const findMatchId = async (petId: string) => {
+    if (!user) return null;
+
+    try {
+      // Get user's pets
+      const { data: userPets, error: userPetsError } = await supabase
+        .from('pets')
+        .select('id')
+        .eq('owner_id', user.id);
+
+      if (userPetsError) throw userPetsError;
+      if (!userPets || userPets.length === 0) return null;
+
+      const userPetIds = userPets.map(pet => pet.id);
+
+      // Look for match where user's pet is pet_id and selected pet is matched_pet_id
+      const { data: match1, error: match1Error } = await supabase
+        .from('matches')
+        .select('id')
+        .in('pet_id', userPetIds)
+        .eq('matched_pet_id', petId)
+        .eq('status', 'accepted')
+        .maybeSingle();
+
+      if (match1Error) throw match1Error;
+      if (match1) return match1.id;
+
+      // Look for match where user's pet is matched_pet_id and selected pet is pet_id
+      const { data: match2, error: match2Error } = await supabase
+        .from('matches')
+        .select('id')
+        .eq('pet_id', petId)
+        .in('matched_pet_id', userPetIds)
+        .eq('status', 'accepted')
+        .maybeSingle();
+
+      if (match2Error) throw match2Error;
+      if (match2) return match2.id;
+
+      return null;
+    } catch (error) {
+      console.error("Error finding match ID:", error);
+      return null;
+    }
   };
 
-  const handleSendMessage = () => {
-    if (!chatMessage.trim()) return;
+  const handleChatClick = async (pet: Pet) => {
+    setSelectedMatch(pet);
     
-    toast({
-      title: "Message sent!",
-      description: "Your message has been sent.",
-    });
+    const foundMatchId = await findMatchId(pet.id);
+    if (foundMatchId) {
+      setMatchId(foundMatchId);
+      setChatOpen(true);
+    } else {
+      setErrorMessage("Could not find a valid match. Please try again later.");
+      setErrorDialogOpen(true);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!chatMessage.trim() || !user || !matchId) return;
     
-    setChatMessage("");
-    // In a real app, we would send this to the backend via WebSocket or AppSync GraphQL
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          match_id: matchId,
+          sender_id: user.id,
+          content: chatMessage.trim()
+        });
+
+      if (error) throw error;
+      
+      setChatMessage("");
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const formatMessageTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   if (!user) {
@@ -198,9 +337,30 @@ const Matches = () => {
           </DialogHeader>
           
           <div className="bg-gray-50 rounded p-3 h-60 mb-4 overflow-y-auto">
-            <div className="text-center text-gray-500 text-sm p-3">
-              Start chatting with {selectedMatch?.name}'s owner to arrange a playdate!
-            </div>
+            {messages.length === 0 ? (
+              <div className="text-center text-gray-500 text-sm p-3">
+                Start chatting with {selectedMatch?.name}'s owner to arrange a playdate!
+              </div>
+            ) : (
+              <div className="flex flex-col space-y-2">
+                {messages.map((message) => (
+                  <div 
+                    key={message.id}
+                    className={`p-2 rounded-lg max-w-[80%] ${
+                      message.sender_id === user.id 
+                        ? 'bg-petpals-purple text-white self-end rounded-br-none' 
+                        : 'bg-gray-200 text-gray-800 self-start rounded-bl-none'
+                    }`}
+                  >
+                    <div>{message.content}</div>
+                    <div className={`text-xs ${message.sender_id === user.id ? 'text-purple-100' : 'text-gray-500'} text-right`}>
+                      {formatMessageTime(message.created_at)}
+                    </div>
+                  </div>
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
+            )}
           </div>
           
           <div className="flex gap-2">
@@ -224,6 +384,26 @@ const Matches = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Error Dialog */}
+      <AlertDialog open={errorDialogOpen} onOpenChange={setErrorDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unable to start chat</AlertDialogTitle>
+            <AlertDialogDescription>
+              {errorMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-end">
+            <Button 
+              onClick={() => setErrorDialogOpen(false)}
+              className="bg-petpals-purple hover:bg-petpals-purple/90"
+            >
+              OK
+            </Button>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
