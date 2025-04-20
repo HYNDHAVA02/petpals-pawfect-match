@@ -70,6 +70,61 @@ export const DashboardProvider = ({ children }: { children: React.ReactNode }) =
     fetchOwnerNames();
   }, [matchesData, user?.id, toast]);
 
+  // Set up real-time subscription for profile updates
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('profiles-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles',
+        },
+        () => {
+          console.log('Profiles updated, refreshing owner names...');
+          // When profiles are updated, refetch owner names
+          if (matchesData && matchesData.length > 0) {
+            const fetchUpdatedNames = async () => {
+              try {
+                const ownerIds = matchesData.map(match => {
+                  const isUserPetAsPetId = match.pet.owner_id === user?.id;
+                  const otherPet = isUserPetAsPetId ? match.matched_pet : match.pet;
+                  return otherPet.owner_id;
+                }).filter((id, index, self) => self.indexOf(id) === index);
+                
+                if (ownerIds.length === 0) return;
+                
+                const { data, error } = await supabase
+                  .from('profiles')
+                  .select('id, full_name')
+                  .in('id', ownerIds);
+                  
+                if (error) throw error;
+                
+                const nameMap: Record<string, string> = {};
+                data?.forEach(profile => {
+                  nameMap[profile.id] = profile.full_name || 'Pet Owner';
+                });
+                
+                setOwnerNames(nameMap);
+              } catch (error) {
+                console.error('Error updating owner names:', error);
+              }
+            };
+            fetchUpdatedNames();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, matchesData]);
+
   const handlePetsUpdate = useCallback(() => {
     refetchPets();
   }, [refetchPets]);
@@ -111,6 +166,12 @@ export const DashboardProvider = ({ children }: { children: React.ReactNode }) =
   });
 
   console.log('Processed matches in context:', matches.length);
+  console.log('Owner names available:', Object.keys(ownerNames).length);
+  console.log('Sample matches with owner names:', matches.map(m => ({
+    petName: m.name,
+    ownerName: m.ownerName,
+    ownerId: m.ownerId
+  })));
 
   const value = {
     userPets,
