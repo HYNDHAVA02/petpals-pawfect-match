@@ -53,6 +53,7 @@ export const ActivityOverview = () => {
       .subscribe();
 
     return () => {
+      // Clean up realtime subscription
       supabase.removeChannel(channel);
     };
   }, [user, handleMatchesUpdate]);

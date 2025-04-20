@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,7 +29,8 @@ const MatchesContent = () => {
 
     setLoading(false);
 
-    // Initialize real-time subscription for matches
+    // Set up Supabase realtime subscription for matches table
+    // This ensures the matches list stays up-to-date in real-time
     const channel = supabase
       .channel('matches-changes')
       .on(
@@ -47,6 +47,7 @@ const MatchesContent = () => {
       .subscribe();
 
     return () => {
+      // Clean up realtime subscription
       supabase.removeChannel(channel);
     };
   }, [user, handleMatchesUpdate, navigate, setLoading]);
@@ -54,6 +55,7 @@ const MatchesContent = () => {
   const handleChatClick = async (pet: Pet) => {
     setSelectedMatch(pet);
     
+    // Find the match ID between the user's pet and the selected pet
     const foundMatchId = await findMatchId(pet.id);
     if (foundMatchId) {
       setMatchId(foundMatchId);

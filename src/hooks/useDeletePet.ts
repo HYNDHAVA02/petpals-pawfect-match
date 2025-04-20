@@ -9,7 +9,7 @@ export const useDeletePet = () => {
 
   const checkIfPetHasMatches = async (petId: string) => {
     try {
-      // Check if pet is in any matches as pet_id
+      // Check if pet has any accepted matches as the initiator
       const { data: matches1, error: error1 } = await supabase
         .from("matches")
         .select("id")
@@ -18,7 +18,7 @@ export const useDeletePet = () => {
 
       if (error1) throw error1;
 
-      // Check if pet is in any matches as matched_pet_id
+      // Check if pet has any accepted matches as the matched pet
       const { data: matches2, error: error2 } = await supabase
         .from("matches")
         .select("id")
@@ -31,54 +31,6 @@ export const useDeletePet = () => {
     } catch (error) {
       console.error("Error checking if pet has matches:", error);
       return false;
-    }
-  };
-
-  const deletePet = async (petId: string, forceDelete: boolean = false) => {
-    setIsDeleting(true);
-    
-    try {
-      // Check if pet has matches
-      if (!forceDelete) {
-        const hasMatches = await checkIfPetHasMatches(petId);
-        
-        if (hasMatches) {
-          setIsDeleting(false);
-          // Return true to indicate pet has matches and wasn't deleted
-          return true;
-        }
-      }
-      
-      // If force delete or no matches, proceed with deletion
-      if (forceDelete) {
-        // Notify matches about this pet being deleted
-        await notifyMatchesAboutDeletion(petId);
-      }
-      
-      // Delete the pet
-      const { error } = await supabase
-        .from("pets")
-        .delete()
-        .eq("id", petId);
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Pet deleted",
-        description: "Your pet has been successfully deleted",
-      });
-      
-      return false;
-    } catch (error) {
-      console.error("Error deleting pet:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete pet",
-        variant: "destructive",
-      });
-      return false;
-    } finally {
-      setIsDeleting(false);
     }
   };
 
@@ -97,27 +49,29 @@ export const useDeletePet = () => {
         .eq("matched_pet_id", petId)
         .eq("status", "accepted");
 
-      // Add a message to each match conversation about the pet being deleted
+      // Add notification messages to each match conversation
       const timestamp = new Date().toISOString();
       
-      // Process first set of matches
+      // Process first set of matches where pet initiated
       if (matches1 && matches1.length > 0) {
         for (const match of matches1) {
+          // Insert system message to notify about pet deletion
           await supabase.from("messages").insert({
             match_id: match.id,
-            sender_id: petId, // Using pet ID as sender to indicate system message
+            sender_id: petId,
             content: "This pet has been removed by its owner and is no longer available for matching.",
             created_at: timestamp,
           });
         }
       }
       
-      // Process second set of matches
+      // Process second set of matches where pet was matched with
       if (matches2 && matches2.length > 0) {
         for (const match of matches2) {
+          // Insert system message to notify about pet deletion
           await supabase.from("messages").insert({
             match_id: match.id,
-            sender_id: petId, // Using pet ID as sender to indicate system message
+            sender_id: petId,
             content: "This pet has been removed by its owner and is no longer available for matching.",
             created_at: timestamp,
           });
@@ -125,6 +79,51 @@ export const useDeletePet = () => {
       }
     } catch (error) {
       console.error("Error notifying matches about deletion:", error);
+    }
+  };
+
+  const deletePet = async (petId: string, forceDelete: boolean = false) => {
+    setIsDeleting(true);
+    
+    try {
+      if (!forceDelete) {
+        const hasMatches = await checkIfPetHasMatches(petId);
+        
+        if (hasMatches) {
+          setIsDeleting(false);
+          return true; // Indicates pet has matches and wasn't deleted
+        }
+      }
+      
+      if (forceDelete) {
+        // Notify matches about deletion before removing the pet
+        await notifyMatchesAboutDeletion(petId);
+      }
+      
+      // Delete the pet record from the database
+      const { error } = await supabase
+        .from("pets")
+        .delete()
+        .eq("id", petId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Pet deleted",
+        description: "Your pet has been successfully deleted",
+      });
+      
+      return false; // Indicates successful deletion
+    } catch (error) {
+      console.error("Error deleting pet:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete pet",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setIsDeleting(false);
     }
   };
 

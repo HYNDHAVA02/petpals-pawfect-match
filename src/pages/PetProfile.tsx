@@ -23,7 +23,8 @@ const PetProfile = () => {
     setIsSubmitting(true);
     
     try {
-      // Format data for Supabase
+      // Format and insert new pet data into the pets table
+      // This creates a new pet profile in the database
       const petData = {
         name: formData.name,
         age: parseFloat(formData.age),
@@ -37,7 +38,6 @@ const PetProfile = () => {
         longitude: formData.longitude
       };
       
-      // Create pet in Supabase
       await createPet(petData);
       
       toast({

@@ -19,6 +19,7 @@ export const useMessages = (matchId: string | null, userId: string | null) => {
 
     const fetchMessages = async () => {
       try {
+        // Fetch all messages for a specific match
         const { data, error } = await supabase
           .from('messages')
           .select('*')
@@ -39,7 +40,7 @@ export const useMessages = (matchId: string | null, userId: string | null) => {
 
     fetchMessages();
 
-    // Subscribe to new messages
+    // Subscribe to new messages using Supabase's realtime feature
     const channel = supabase
       .channel('schema-db-changes')
       .on(
@@ -51,6 +52,7 @@ export const useMessages = (matchId: string | null, userId: string | null) => {
           filter: `match_id=eq.${matchId}`,
         },
         (payload) => {
+          // Add new message to state when received
           const newMessage = payload.new as Message;
           setMessages(prev => [...prev, newMessage]);
         }
@@ -58,6 +60,7 @@ export const useMessages = (matchId: string | null, userId: string | null) => {
       .subscribe();
 
     return () => {
+      // Clean up realtime subscription
       supabase.removeChannel(channel);
     };
   }, [matchId, userId, toast]);
@@ -66,6 +69,7 @@ export const useMessages = (matchId: string | null, userId: string | null) => {
     if (!matchId || !userId || !content.trim()) return;
     
     try {
+      // Insert new message into the messages table
       const { error } = await supabase
         .from('messages')
         .insert({
