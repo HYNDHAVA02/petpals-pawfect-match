@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -59,19 +60,14 @@ const Discover = () => {
             *,
             profiles:owner_id(full_name)
           `)
-          .neq('owner_id', user.id)
-          .not('id', 'in', `(${Array.from(matchedPetIds).join(',')})`);
-
-        // If user location is available, order by distance
-        if (location) {
-          query = query.rpc('calculate_distance', {
-            lat1: location.latitude,
-            lon1: location.longitude,
-            lat2: 'latitude',
-            lon2: 'longitude'
-          });
-        }
+          .neq('owner_id', user.id);
           
+        // Add condition to exclude matched pets if there are any
+        if (matchedPetIds.size > 0) {
+          query = query.not('id', 'in', `(${Array.from(matchedPetIds).join(',')})`);
+        }
+
+        // Get pets data
         const { data: pets, error } = await query;
         
         if (error) throw error;
@@ -82,8 +78,8 @@ const Discover = () => {
           return;
         }
         
-        // Format pets for the PetCard component
-        const formattedPets: Pet[] = pets.map(pet => ({
+        // Format pets for the PetCard component and calculate distances if location is available
+        let formattedPets: Pet[] = pets.map(pet => ({
           id: pet.id,
           name: pet.name,
           age: pet.age,
@@ -94,10 +90,41 @@ const Discover = () => {
           ownerId: pet.owner_id,
           ownerName: pet.owner_name || "Pet Owner",
           location: pet.location || "Unknown location",
-          distance: location && pet.distance ? 
-            `${(pet.distance / 1000).toFixed(1)} km away` : 
-            undefined
+          distance: undefined
         }));
+        
+        // If user location is available, calculate distances
+        if (location) {
+          // Calculate distance for each pet and add it to the pet object
+          const petsWithDistance = await Promise.all(
+            formattedPets.map(async (pet) => {
+              const petData = pets.find(p => p.id === pet.id);
+              if (petData?.latitude && petData?.longitude) {
+                // Call the distance calculation function
+                const { data: distanceData } = await supabase.rpc('calculate_distance', {
+                  lat1: location.latitude,
+                  lon1: location.longitude, 
+                  lat2: petData.latitude,
+                  lon2: petData.longitude
+                });
+                
+                return {
+                  ...pet,
+                  distance: distanceData ? `${(distanceData / 1000).toFixed(1)} km away` : undefined
+                };
+              }
+              return pet;
+            })
+          );
+          
+          // Sort pets by distance (closest first)
+          formattedPets = petsWithDistance.sort((a, b) => {
+            if (!a.distance || !b.distance) return 0;
+            const distA = parseFloat(a.distance.split(' ')[0]);
+            const distB = parseFloat(b.distance.split(' ')[0]);
+            return distA - distB;
+          });
+        }
         
         setCurrentPets(formattedPets);
         setNoMorePets(formattedPets.length === 0);
