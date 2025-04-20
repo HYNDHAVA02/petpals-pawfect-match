@@ -1,9 +1,9 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
-import { Pet } from "@/components/PetCard";
 import { useToast } from "@/hooks/use-toast";
 import ChatDialog from "@/components/chat/ChatDialog";
 import ErrorDialog from "@/components/common/ErrorDialog";
@@ -11,6 +11,8 @@ import { useMatchDetails } from "@/hooks/useMatchDetails";
 import { EmptyMatches } from "@/components/matches/EmptyMatches";
 import { MatchesGrid } from "@/components/matches/MatchesGrid";
 import { DashboardProvider, useDashboard } from "@/contexts/DashboardContext";
+import { Pet } from "@/components/PetCard";
+import { MatchedPets } from "@/types/match";
 
 const MatchesContent = () => {
   const navigate = useNavigate();
@@ -52,18 +54,9 @@ const MatchesContent = () => {
     };
   }, [user, handleMatchesUpdate, navigate, setLoading]);
 
-  const handleChatClick = async (pet: Pet) => {
-    setSelectedMatch(pet);
-    
-    // Find the match ID between the user's pet and the selected pet
-    const foundMatchId = await findMatchId(pet.id);
-    if (foundMatchId) {
-      setMatchId(foundMatchId);
-      setChatOpen(true);
-    } else {
-      setErrorMessage("Could not find a valid match. Please try again later.");
-      setErrorDialogOpen(true);
-    }
+  const handleChatClick = (matchId: string) => {
+    setMatchId(matchId);
+    setChatOpen(true);
   };
 
   if (!user) {

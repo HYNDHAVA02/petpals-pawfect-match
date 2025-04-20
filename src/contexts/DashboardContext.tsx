@@ -3,10 +3,11 @@ import { createContext, useContext, useCallback } from 'react';
 import { Pet } from "@/components/PetCard";
 import { usePets, useMatches } from "@/hooks/useSupabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { MatchedPets } from "@/types/match";
 
 type DashboardContextType = {
   userPets: Pet[];
-  matches: Pet[];
+  matches: MatchedPets[];
   isLoadingPets: boolean;
   isLoadingMatches: boolean;
   handlePetsUpdate: () => void;
@@ -41,24 +42,8 @@ export const DashboardProvider = ({ children }: { children: React.ReactNode }) =
     ownerName: pet.owner_name || "Pet Owner",
   })) || [];
 
-  // Transform matches data to Pet interface
-  const matches: Pet[] = (matchesData || []).map((match) => {
-    // Determine which pet belongs to another owner
-    const isUserPetAsPetId = match.pet.owner_id === user?.id;
-    const matchedPet = isUserPetAsPetId ? match.matched_pet : match.pet;
-    
-    return {
-      id: matchedPet.id,
-      name: matchedPet.name,
-      age: matchedPet.age,
-      breed: matchedPet.breed,
-      gender: matchedPet.gender as "male" | "female",
-      bio: matchedPet.bio || "",
-      imageUrl: matchedPet.image_url || "/placeholder.svg",
-      ownerId: matchedPet.owner_id,
-      ownerName: matchedPet.owner_name || "Pet Owner",
-    };
-  });
+  // Use the matches data directly as it now conforms to MatchedPets type
+  const matches: MatchedPets[] = matchesData || [];
 
   const value = {
     userPets,

@@ -1,6 +1,8 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/types/database.types';
+import { MatchedPets } from '@/types/match';
 
 export const useProfile = (userId: string | undefined) => {
   return useQuery({
@@ -65,6 +67,7 @@ export const useMatches = (userId: string | undefined) => {
       try {
         console.log('Fetching matches for user:', userId);
         
+        // Use rpc or raw query to access the view
         const { data: matchedPets, error } = await supabase
           .from('matched_pets_view')
           .select('*');
@@ -74,7 +77,7 @@ export const useMatches = (userId: string | undefined) => {
           throw error;
         }
         
-        return matchedPets || [];
+        return matchedPets as MatchedPets[] || [];
       } catch (error) {
         console.error('Error in useMatches hook:', error);
         throw error;
