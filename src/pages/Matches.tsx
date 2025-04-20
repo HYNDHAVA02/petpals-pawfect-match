@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,6 +9,7 @@ import { Pet } from "@/components/PetCard";
 import { useToast } from "@/hooks/use-toast";
 import ChatDialog from "@/components/chat/ChatDialog";
 import ErrorDialog from "@/components/common/ErrorDialog";
+import { Button } from "@/components/ui/button";
 
 const Matches = () => {
   const navigate = useNavigate();
