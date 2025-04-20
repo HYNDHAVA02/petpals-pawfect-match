@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/types/database.types';
@@ -63,17 +62,28 @@ export const useMatches = (userId: string | undefined) => {
     queryKey: ['matches', userId],
     queryFn: async () => {
       if (!userId) return [];
-      const { data, error } = await supabase
-        .from('matches')
-        .select(`
-          *,
-          pet:pets!pet_id(*),
-          matched_pet:pets!matched_pet_id(*)
-        `)
-        .or(`pet.owner_id.eq.${userId},matched_pet.owner_id.eq.${userId}`);
-      
-      if (error) throw error;
-      return data;
+      try {
+        console.log('Fetching matches for user:', userId);
+        const { data, error } = await supabase
+          .from('matches')
+          .select(`
+            *,
+            pet:pets!pet_id(*),
+            matched_pet:pets!matched_pet_id(*)
+          `)
+          .or(`pet.owner_id.eq.${userId},matched_pet.owner_id.eq.${userId}`);
+        
+        if (error) {
+          console.error('Error fetching matches:', error);
+          throw error;
+        }
+        
+        console.log('Matches data:', data);
+        return data;
+      } catch (error) {
+        console.error('Error in useMatches hook:', error);
+        throw error;
+      }
     },
     enabled: !!userId,
   });
@@ -98,4 +108,3 @@ export const useCreateMatch = () => {
     },
   });
 };
-
