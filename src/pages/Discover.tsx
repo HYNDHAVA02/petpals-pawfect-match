@@ -3,9 +3,9 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import PetCard, { Pet } from "@/components/PetCard";
-import { mockPets } from "@/data/mockData";
 
 const Discover = () => {
   const navigate = useNavigate();
@@ -21,10 +21,65 @@ const Discover = () => {
       return;
     }
     
-    // Load initial pet data
-    setCurrentPets(mockPets);
-    setLoading(false);
-  }, [user, navigate]);
+    // Fetch pets from Supabase
+    const fetchPets = async () => {
+      try {
+        setLoading(true);
+        
+        // Get the current user's pets to exclude them
+        const { data: userPets } = await supabase
+          .from('pets')
+          .select('id')
+          .eq('owner_id', user.id);
+        
+        const userPetIds = userPets?.map(pet => pet.id) || [];
+        
+        // Get pets from other users
+        const { data: pets, error } = await supabase
+          .from('pets')
+          .select(`
+            *,
+            profiles:owner_id(full_name)
+          `)
+          .neq('owner_id', user.id);
+          
+        if (error) throw error;
+        
+        if (!pets || pets.length === 0) {
+          setNoMorePets(true);
+          setLoading(false);
+          return;
+        }
+        
+        // Format pets for the PetCard component
+        const formattedPets: Pet[] = pets.map(pet => ({
+          id: pet.id,
+          name: pet.name,
+          age: pet.age,
+          breed: pet.breed,
+          gender: pet.gender as "male" | "female",
+          bio: pet.bio || "",
+          imageUrl: pet.image_url || "/placeholder.svg",
+          ownerId: pet.owner_id,
+          ownerName: pet.profiles?.full_name || "Pet Owner"
+        }));
+        
+        setCurrentPets(formattedPets);
+        setNoMorePets(formattedPets.length === 0);
+      } catch (error) {
+        console.error("Error fetching pets:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load pets. Please try again later.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchPets();
+  }, [user, navigate, toast]);
 
   const handleSwipeRight = (pet: Pet) => {
     console.log("Liked:", pet.name);
