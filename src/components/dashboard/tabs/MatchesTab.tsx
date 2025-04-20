@@ -3,7 +3,7 @@ import { MatchesList } from "../MatchesList";
 import { useDashboard } from "@/contexts/DashboardContext";
 
 export const MatchesTab = () => {
-  const { matches } = useDashboard();
+  const { matches, isLoadingMatches } = useDashboard();
 
-  return <MatchesList matches={matches} />;
+  return <MatchesList matches={matches} isLoading={isLoadingMatches} />;
 };

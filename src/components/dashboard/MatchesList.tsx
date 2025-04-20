@@ -12,10 +12,22 @@ import {
 
 interface MatchesListProps {
   matches: Pet[];
+  isLoading?: boolean;
 }
 
-export const MatchesList = ({ matches }: MatchesListProps) => {
+export const MatchesList = ({ matches, isLoading }: MatchesListProps) => {
   const navigate = useNavigate();
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Matches</CardTitle>
+          <CardDescription>Loading matches...</CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
 
   return (
     <Card>
