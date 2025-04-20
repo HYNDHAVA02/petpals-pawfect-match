@@ -67,8 +67,8 @@ const Index = () => {
               <div className="relative">
                 <div className="aspect-square rounded-full bg-petpals-pink/20 overflow-hidden shadow-xl">
                   <img
-                    src="https://images.unsplash.com/photo-1582562124811-c09040d0a901"
-                    alt="Happy pets"
+                    src="/lovable-uploads/a86986e9-bfe9-4963-9d88-991b4bc35b9d.png"
+                    alt="Cute dog and cat on a mobile phone"
                     className="w-full h-full object-cover"
                   />
                 </div>
