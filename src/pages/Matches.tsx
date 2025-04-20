@@ -73,8 +73,8 @@ const Matches = () => {
 
         // Get the pets that matched with the user's pets
         const matchedPetIds = allMatches.map(match => 
-          match.pet_id !== userPetIds.includes(match.pet_id) ? match.pet_id : match.matched_pet_id
-        ).filter(id => !userPetIds.includes(id));
+          userPetIds.includes(match.pet_id) ? match.matched_pet_id : match.pet_id
+        );
 
         // Fetch the matched pets' details
         const { data: matchedPets, error: matchedPetsError } = await supabase
