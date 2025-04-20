@@ -20,4 +20,5 @@ export interface PetProfileFormProps {
   onSubmit: (data: PetFormValues & { imageUrl: string; latitude?: number; longitude?: number }) => void;
   initialData?: PetFormValues & { imageUrl: string; latitude?: number; longitude?: number };
   isSubmitting?: boolean;
+  isEditing?: boolean;
 }

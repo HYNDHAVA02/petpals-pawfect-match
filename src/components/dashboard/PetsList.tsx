@@ -9,14 +9,26 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useState } from "react";
+import { DeletePetDialog } from "./DeletePetDialog";
 
 interface PetsListProps {
   userPets: Pet[];
   isLoadingPets: boolean;
+  onPetsUpdate: () => void;
 }
 
-export const PetsList = ({ userPets, isLoadingPets }: PetsListProps) => {
+export const PetsList = ({ userPets, isLoadingPets, onPetsUpdate }: PetsListProps) => {
   const navigate = useNavigate();
+  const [petToDelete, setPetToDelete] = useState<{ id: string; name: string } | null>(null);
+
+  const handleEdit = (petId: string) => {
+    navigate(`/pet-profile/edit/${petId}`);
+  };
+
+  const handleDelete = (pet: Pet) => {
+    setPetToDelete({ id: pet.id, name: pet.name });
+  };
 
   return (
     <Card>
@@ -41,10 +53,18 @@ export const PetsList = ({ userPets, isLoadingPets }: PetsListProps) => {
                     <div className="flex flex-col md:flex-row md:items-center justify-between mb-2">
                       <h3 className="font-bold text-lg">{pet.name}</h3>
                       <div className="space-x-2 mt-2 md:mt-0">
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleEdit(pet.id)}
+                        >
                           Edit
                         </Button>
-                        <Button variant="destructive" size="sm">
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          onClick={() => handleDelete(pet)}
+                        >
                           Delete
                         </Button>
                       </div>
@@ -72,6 +92,18 @@ export const PetsList = ({ userPets, isLoadingPets }: PetsListProps) => {
           </Button>
         </div>
       </CardContent>
+
+      {petToDelete && (
+        <DeletePetDialog
+          isOpen={!!petToDelete}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) setPetToDelete(null);
+          }}
+          petId={petToDelete.id}
+          petName={petToDelete.name}
+          onPetDeleted={onPetsUpdate}
+        />
+      )}
     </Card>
   );
 };
