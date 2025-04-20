@@ -1,36 +1,17 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useLocation } from "@/hooks/useLocation";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin } from "lucide-react";
-
-const petFormSchema = z.object({
-  name: z.string().min(1, { message: "Name is required" }),
-  age: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
-    message: "Age must be a positive number",
-  }),
-  breed: z.string().min(1, { message: "Breed is required" }),
-  gender: z.enum(["male", "female"], {
-    message: "Please select a gender",
-  }),
-  bio: z.string().min(10, { message: "Bio must be at least 10 characters" }),
-  location: z.string().min(1, { message: "Location is required" }),
-});
-
-type PetFormValues = z.infer<typeof petFormSchema>;
-
-interface PetProfileFormProps {
-  onSubmit: (data: PetFormValues & { imageUrl: string; latitude?: number; longitude?: number }) => void;
-  initialData?: PetFormValues & { imageUrl: string; latitude?: number; longitude?: number };
-  isSubmitting?: boolean;
-}
+import { useLocation } from "@/hooks/useLocation";
+import ImageUpload from "./pet-profile/ImageUpload";
+import LocationInput from "./pet-profile/LocationInput";
+import { PetProfileFormProps, petFormSchema, PetFormValues } from "./pet-profile/types";
 
 const PetProfileForm: React.FC<PetProfileFormProps> = ({ 
   onSubmit, 
@@ -38,9 +19,8 @@ const PetProfileForm: React.FC<PetProfileFormProps> = ({
   isSubmitting = false 
 }) => {
   const { toast } = useToast();
-  const { location: userLocation, error: locationError } = useLocation();
+  const { location: userLocation } = useLocation();
   const [imagePreview, setImagePreview] = useState<string>(initialData?.imageUrl || "");
-  const [isUploading, setIsUploading] = useState(false);
   const [useCurrentLocation, setUseCurrentLocation] = useState(false);
 
   const form = useForm<PetFormValues>({
@@ -54,38 +34,6 @@ const PetProfileForm: React.FC<PetProfileFormProps> = ({
       location: "",
     },
   });
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Image should be less than 5MB",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!file.type.startsWith("image/")) {
-      toast({
-        title: "Invalid file",
-        description: "Please upload an image file",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsUploading(true);
-    
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result as string);
-      setIsUploading(false);
-    };
-    reader.readAsDataURL(file);
-  };
 
   const handleSubmit = (data: PetFormValues) => {
     if (!imagePreview) {
@@ -107,46 +55,10 @@ const PetProfileForm: React.FC<PetProfileFormProps> = ({
     });
   };
 
-  const handleUseCurrentLocation = () => {
-    if (userLocation) {
-      setUseCurrentLocation(true);
-      form.setValue("location", "Using current location");
-    } else {
-      toast({
-        title: "Location unavailable",
-        description: "Please enable location services or enter location manually",
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <div className="mb-6">
-          <div className="relative w-40 h-40 mx-auto rounded-full overflow-hidden border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
-            {imagePreview ? (
-              <img 
-                src={imagePreview} 
-                alt="Pet preview" 
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span className="text-gray-400 text-sm text-center px-2">
-                Click to upload pet photo
-              </span>
-            )}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            />
-          </div>
-          <p className="text-xs text-center mt-2 text-gray-500">
-            Click to upload (max 5MB)
-          </p>
-        </div>
+        <ImageUpload imagePreview={imagePreview} setImagePreview={setImagePreview} />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
@@ -216,36 +128,11 @@ const PetProfileForm: React.FC<PetProfileFormProps> = ({
           />
         </div>
 
-        <div className="space-y-2">
-          <FormField
-            control={form.control}
-            name="location"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Location</FormLabel>
-                <div className="flex gap-2">
-                  <FormControl>
-                    <Input 
-                      placeholder="Enter location" 
-                      {...field}
-                      disabled={useCurrentLocation}
-                    />
-                  </FormControl>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleUseCurrentLocation}
-                    className="flex items-center gap-2"
-                  >
-                    <MapPin className="h-4 w-4" />
-                    Use Current
-                  </Button>
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        <LocationInput 
+          form={form} 
+          useCurrentLocation={useCurrentLocation}
+          setUseCurrentLocation={setUseCurrentLocation}
+        />
 
         <FormField
           control={form.control}
@@ -268,10 +155,9 @@ const PetProfileForm: React.FC<PetProfileFormProps> = ({
         <Button 
           type="submit" 
           className="w-full bg-petpals-purple hover:bg-petpals-purple/90"
-          disabled={isSubmitting || isUploading}
+          disabled={isSubmitting}
         >
-          {isUploading ? "Uploading..." : 
-           isSubmitting ? "Saving..." : 
+          {isSubmitting ? "Saving..." : 
            initialData ? "Update Pet Profile" : "Create Pet Profile"}
         </Button>
       </form>
