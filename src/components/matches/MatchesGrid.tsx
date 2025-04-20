@@ -1,10 +1,10 @@
 
-import { Pet } from "@/components/PetCard";
+import { MatchedPets } from "@/types/match";
 import MatchCard from "@/components/MatchCard";
 
 interface MatchesGridProps {
-  matches: Pet[];
-  onChatClick: (pet: Pet) => void;
+  matches: MatchedPets[];
+  onChatClick: (matchId: string) => void;
 }
 
 export const MatchesGrid = ({ matches, onChatClick }: MatchesGridProps) => {
@@ -12,8 +12,8 @@ export const MatchesGrid = ({ matches, onChatClick }: MatchesGridProps) => {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {matches.map((match) => (
         <MatchCard 
-          key={match.id}
-          pet={match}
+          key={match.match_id}
+          match={match}
           onChatClick={onChatClick}
         />
       ))}

@@ -3,22 +3,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Pet } from "./PetCard";
+import { MatchedPets } from "@/types/match";
 
 interface MatchCardProps {
-  pet: Pet;
-  onChatClick: (pet: Pet) => void;
+  match: MatchedPets;
+  onChatClick: (matchId: string) => void;
 }
 
-const MatchCard: React.FC<MatchCardProps> = ({ pet, onChatClick }) => {
+const MatchCard: React.FC<MatchCardProps> = ({ match, onChatClick }) => {
   return (
     <Card className="overflow-hidden hover:shadow-md transition-shadow duration-200">
       <CardContent className="p-0">
         <div className="relative">
-          <img 
-            src={pet.imageUrl} 
-            alt={pet.name}
-            className="w-full h-48 object-cover"
-          />
           <div className="absolute top-2 right-2">
             <Badge className="bg-petpals-purple text-white border-none">
               Match!
@@ -26,30 +22,35 @@ const MatchCard: React.FC<MatchCardProps> = ({ pet, onChatClick }) => {
           </div>
         </div>
         <div className="p-4">
-          <div className="flex justify-between items-start mb-2">
-            <div>
-              <h3 className="font-semibold text-lg">{pet.name}</h3>
-              <p className="text-sm text-gray-600">{pet.breed}, {pet.age} years</p>
-              {pet.location && (
-                <p className="text-xs text-gray-500">{pet.location}</p>
-              )}
-              {pet.distance && (
-                <p className="text-xs text-gray-500">{pet.distance}</p>
-              )}
-              <div className="mt-2">
-                <p className="text-xs text-gray-500">Owner: {pet.ownerName}</p>
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-lg">{match.pet1_name}</h3>
+                <p className="text-sm text-gray-600">
+                  {match.pet1_breed}, {match.pet1_age} years
+                </p>
+                <p className="text-xs text-gray-500">Owner: {match.pet1_owner_name}</p>
+              </div>
+              <div className="text-center text-gray-400">
+                matched with
+              </div>
+              <div className="text-right">
+                <h3 className="font-semibold text-lg">{match.pet2_name}</h3>
+                <p className="text-sm text-gray-600">
+                  {match.pet2_breed}, {match.pet2_age} years
+                </p>
+                <p className="text-xs text-gray-500">Owner: {match.pet2_owner_name}</p>
               </div>
             </div>
-          </div>
-          <p className="text-sm text-gray-600 line-clamp-2 mb-3">{pet.bio}</p>
-          <div className="flex justify-end items-center">
-            <Button 
-              size="sm" 
-              className="bg-petpals-purple hover:bg-petpals-purple/90"
-              onClick={() => onChatClick(pet)}
-            >
-              Chat
-            </Button>
+            <div className="flex justify-end items-center">
+              <Button 
+                size="sm" 
+                className="bg-petpals-purple hover:bg-petpals-purple/90"
+                onClick={() => onChatClick(match.match_id)}
+              >
+                Chat
+              </Button>
+            </div>
           </div>
         </div>
       </CardContent>
@@ -58,4 +59,3 @@ const MatchCard: React.FC<MatchCardProps> = ({ pet, onChatClick }) => {
 };
 
 export default MatchCard;
-
