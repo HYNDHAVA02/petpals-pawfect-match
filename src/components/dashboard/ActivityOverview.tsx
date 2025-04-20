@@ -1,9 +1,10 @@
 
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDashboard } from "@/contexts/DashboardContext";
 import {
   Card,
   CardContent,
@@ -15,6 +16,8 @@ import {
 export const ActivityOverview = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { handleMatchesUpdate } = useDashboard();
+  const [hasRecentActivity, setHasRecentActivity] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -31,6 +34,8 @@ export const ActivityOverview = () => {
         },
         () => {
           console.log('Match activity updated');
+          handleMatchesUpdate();
+          setHasRecentActivity(true);
         }
       )
       .on(
@@ -42,6 +47,7 @@ export const ActivityOverview = () => {
         },
         () => {
           console.log('Message activity updated');
+          setHasRecentActivity(true);
         }
       )
       .subscribe();
@@ -49,7 +55,7 @@ export const ActivityOverview = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, handleMatchesUpdate]);
 
   return (
     <Card className="mt-6">
@@ -60,10 +66,16 @@ export const ActivityOverview = () => {
       <CardContent>
         <div className="space-y-4">
           <div className="bg-gray-50 p-4 rounded-lg">
-            <p className="text-gray-600">
-              Welcome to PetPals! Start by creating pet profiles, then discover and
-              match with other pets in your area.
-            </p>
+            {hasRecentActivity ? (
+              <p className="text-gray-600">
+                You have new activity! Check your matches and messages.
+              </p>
+            ) : (
+              <p className="text-gray-600">
+                Welcome to PetPals! Start by creating pet profiles, then discover and
+                match with other pets in your area.
+              </p>
+            )}
           </div>
 
           <Button
