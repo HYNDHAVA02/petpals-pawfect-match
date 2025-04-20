@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/types/database.types';
@@ -67,28 +66,27 @@ export const useMatches = (userId: string | undefined) => {
       try {
         console.log('Fetching matches for user:', userId);
         
-        // Use rpc to create a custom SQL query or use a raw SQL query for the view
-        // since TypeScript definitions don't recognize views
+        // Join the matches with pets table through explicit ID references
         const { data, error } = await supabase
           .from('matches')
           .select(`
             id,
             status,
             created_at,
-            pet:pet_id (
+            pet_id,
+            matched_pet_id,
+            pet_details:pets!pet_id (
               id,
               name,
               breed,
               age,
-              owner_id,
               owner_name
             ),
-            matched_pet:matched_pet_id (
+            matched_pet_details:pets!matched_pet_id (
               id,
               name,
               breed,
               age,
-              owner_id,
               owner_name
             )
           `);
@@ -103,16 +101,16 @@ export const useMatches = (userId: string | undefined) => {
           match_id: match.id,
           status: match.status,
           match_created_at: match.created_at,
-          pet1_id: match.pet?.id || '',
-          pet1_name: match.pet?.name || '',
-          pet1_breed: match.pet?.breed || '',
-          pet1_age: match.pet?.age || 0,
-          pet1_owner_name: match.pet?.owner_name || '',
-          pet2_id: match.matched_pet?.id || '',
-          pet2_name: match.matched_pet?.name || '',
-          pet2_breed: match.matched_pet?.breed || '',
-          pet2_age: match.matched_pet?.age || 0,
-          pet2_owner_name: match.matched_pet?.owner_name || ''
+          pet1_id: match.pet_details?.id || '',
+          pet1_name: match.pet_details?.name || '',
+          pet1_breed: match.pet_details?.breed || '',
+          pet1_age: match.pet_details?.age || 0,
+          pet1_owner_name: match.pet_details?.owner_name || '',
+          pet2_id: match.matched_pet_details?.id || '',
+          pet2_name: match.matched_pet_details?.name || '',
+          pet2_breed: match.matched_pet_details?.breed || '',
+          pet2_age: match.matched_pet_details?.age || 0,
+          pet2_owner_name: match.matched_pet_details?.owner_name || ''
         })) as MatchedPets[];
         
         return transformedData;
